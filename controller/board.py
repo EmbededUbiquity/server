@@ -2,7 +2,7 @@
 
 BOARD_SIZE = 16
 
-# Tipos de casilla
+# Tile Types
 TYPE_NORMAL = "normal"
 TYPE_DMG_1  = "dmg_1" 
 TYPE_DMG_2  = "dmg_2"  

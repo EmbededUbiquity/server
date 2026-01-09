@@ -9,6 +9,7 @@ class Player:
         self.finished = False
         self.mini_score = 0     
         self.mini_done = False  
+        self.sensor_state = "UNKNOWN"
 
 class Game:
     def __init__(self, n_players=3):
@@ -19,6 +20,10 @@ class Game:
         self.winner = None
         self.current_minigame = None
         self.minigame_target = 0
+        
+    def update_sensor(self, pid, state):
+        if 0 <= pid < len(self.players):
+            self.players[pid].sensor_state = state
 
     def set_turn_order(self, rolls):
         rolls.sort(key=lambda x: (-x[1], x[2]))
@@ -34,14 +39,14 @@ class Game:
         if p.pos == BOARD_SIZE:
             self.winner = p.id
             self.state = "GAME_OVER"
-            return f"¡GANA P{p.id}!"
+            return f"WINNER: P{p.id+1}!"
         t_type, hp_mod = get_tile_effect(p.pos)
         p.hp += hp_mod
-        msg = f"P{p.id} a casilla {p.pos} ({t_type})."
+        msg = f"P{p.id+1} to {p.pos} ({t_type})"
         if p.hp <= 0:
             p.pos = max(0, p.pos - 1)
             p.hp = 10
-            msg += " ¡MUERTO! Respawn."
+            msg = f"P{p.id+1} DIED! Rspwn"
         return msg
         
     def next_turn(self):
@@ -52,7 +57,7 @@ class Game:
             return True
         return False
 
-    # --- LÓGICA DE RESULTADOS ---
+    # --- RESULTS LOGIC ---
     def apply_minigame_penalties(self):
         is_high_score_better = (self.current_minigame == "MASH")
         
@@ -67,7 +72,20 @@ class Game:
             results.sort(key=lambda x: x[1], reverse=True) 
         else:
             results.sort(key=lambda x: x[1]) 
-        logs = [f"Ganador: P{results[0][0].id}"]
+        # Format score
+        def fmt_score(sc):
+            if sc >= 999.0: return "DNF"
+            if self.current_minigame == "MASH": return f"{int(sc)}"
+            return f"{sc:.2f}s"
+
+        w_p = results[0][0]
+        w_score = fmt_score(results[0][1])
+        logs = [f"Win:P{w_p.id + 1} ({w_score})"]
+        
+        if len(results) > 1:
+            s_p = results[1][0]
+            s_score = fmt_score(results[1][1])
+            logs.append(f"2nd:P{s_p.id + 1} ({s_score})")
         if len(results) > 1:
             results[1][0].hp -= 1 
         if len(results) > 2:
@@ -76,7 +94,7 @@ class Game:
             if p.hp <= 0:
                 p.pos = max(0, p.pos - 1)
                 p.hp = 10
-                logs.append(f"P{p.id} muere y resetea.")
+                logs.append(f"P{p.id + 1} died! Reset")
             p.mini_score = 0
             p.mini_done = False
 
